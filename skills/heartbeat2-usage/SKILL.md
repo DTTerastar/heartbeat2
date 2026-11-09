@@ -33,8 +33,12 @@ Owner wakes, cron and anchored repeats are never snapped; show their cache effec
   the configured owner floor, at most 4 hours / 24 fires. Ends on notify=true
   or three consecutive no_change outcomes. Prefer a watcher when possible.
 
-Only messaging-gateway conversations are supported: DMs by default, plus group
-and topic chats when `dm_only` is off. The tool chooses this session; never
+Messaging-gateway conversations are supported: DMs by default, plus group
+and topic chats when `dm_only` is off. This installation also supports live
+hermes-converse voice conversations through its profile-local bridge. Use `pulse`
+normally there; ordinary API sessions remain unsupported. Voice wakes wait while
+the device is busy or disconnected and retain their normal expiry and catch-up limits.
+The tool chooses this session; never
 supply a destination or model. If the injection consent YAML is missing, show
 the returned YAML. Respect reported clamps; never write plugin settings to
 widen bounds. Proposed items need `/pulse ok`.

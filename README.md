@@ -86,6 +86,12 @@ Every scenario and its hard bars are in [bench/README.md](bench/README.md); the 
 One poller per profile runs inside the messaging gateway and ticks every 5 seconds. A file lock guarantees only one poller even when several Hermes processes share the profile. Every fire is a durable claim with an attempt marker. An accepted turn that never starts is tried three times, and a refused injection backs off and is tried five times, before it is marked dead. A turn that started but never finished (a crash or restart) is recorded as interrupted. Hermes may auto-resume that wake turn, sometimes before heartbeat2's restart recovery has run; heartbeat2 keeps the replay silent either way, never counts it as a fire or delivery, and counts it as a model turn toward the daily cap.
 
 ## Install
+Local voice integration patch: a connected hermes-converse session may arm `pulse`
+wakes through a profile-local bridge. Wakes use the persistent API conversation,
+wait for an idle connected device, and deliver only the final transformed response.
+Ordinary API sessions remain refused; quiet hours, consent, caps, expiry, and silent
+verdicts still apply. The gateway must be restarted after installing this patch.
+
 Requires **Hermes ≥ 0.21.6** and Python ≥ 3.11 on macOS or Linux. HeartBeat 2.0 delivers into **messaging-gateway DMs** (and group or topic chats when `dm_only` is off): Telegram, Discord, Slack, WhatsApp and the other gateway platforms.
 
 ```bash
