@@ -37,11 +37,27 @@ def one_shot(wake):
     return wake.kind == 'at'
 
 # Built-in messaging gateways at Hermes 04eb00cef7, gateway/config.py:217.
-# Registered plugin adapters can be admitted explicitly by the Hermes adapter.
 MESSAGING_PLATFORMS = frozenset({"telegram", "discord", "whatsapp", "whatsapp_cloud",
     "slack", "signal", "mattermost", "matrix", "email", "sms", "dingtalk", "feishu",
     "wecom", "wecom_callback", "weixin", "bluebubbles", "qqbot", "yuanbao", "relay"})
 NON_GATEWAY_PLATFORMS = frozenset({"cli", "tui", "desktop", "api_server", "cron", "local"})
+
+
+def gateway_platform(platform):
+    """A messaging gateway: built in, or a plugin adapter registered with the Hermes gateway.
+    A registered adapter's chat is a gateway session like any other, so it is scheduled and
+    delivered to the same way."""
+    if not platform or platform in NON_GATEWAY_PLATFORMS:
+        return False
+    if platform in MESSAGING_PLATFORMS:
+        return True
+    try:
+        from gateway.platform_registry import platform_registry
+        return bool(platform_registry.is_registered(platform))
+    except Exception:
+        return False  # no gateway in this process, or it cannot say
+
+
 INJECTION_CONFIG = "plugins:\n  entries:\n    heartbeat2:\n      allow_gateway_injection: true"
 
 
@@ -229,7 +245,7 @@ class Policy:
                       registered_gateway: bool = False, parent_role: bool = False) -> Gate:
         if not session_key or session_key == "default":
             return Gate(False, "missing_session")
-        if not platform or platform in NON_GATEWAY_PLATFORMS or (platform not in MESSAGING_PLATFORMS and not registered_gateway):
+        if not platform or platform in NON_GATEWAY_PLATFORMS or not (registered_gateway or gateway_platform(platform)):
             return Gate(False, "non_gateway")
         if self.dm_only and chat_type != "dm":
             return Gate(False, "dm_only")

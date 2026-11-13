@@ -42,6 +42,56 @@ def test_I14_non_gateway_refused(platform, clock):
     assert not result.allowed and result.reason == "non_gateway"
 
 
+@pytest.fixture
+def registered(monkeypatch):
+    """A Hermes gateway whose platform registry holds one plugin adapter, ``converse``."""
+    import sys
+    import types
+    registry = types.SimpleNamespace(is_registered=lambda name: name == "converse")
+    monkeypatch.setitem(sys.modules, "gateway", types.ModuleType("gateway"))
+    monkeypatch.setitem(sys.modules, "gateway.platform_registry",
+                        types.SimpleNamespace(platform_registry=registry))
+
+
+def test_plugin_adapter_registered_with_the_gateway_is_a_messaging_platform(registered, clock):
+    from heartbeat2.policy import gateway_platform
+    assert gateway_platform("converse") and gateway_platform("telegram")
+    assert not gateway_platform("made_up") and not gateway_platform("")
+    p = Policy.from_settings({}, clock=clock)
+    assert p.creation_gate(session_key="s", platform="converse", chat_type="dm",
+                           allow_gateway_injection=True).reason != "non_gateway"
+    assert p.creation_gate(session_key="s", platform="made_up", chat_type="dm",
+                           allow_gateway_injection=True).reason == "non_gateway"
+
+
+@pytest.mark.parametrize("platform", ["cli", "tui", "desktop", "api_server", "cron", "local"])
+def test_registration_never_admits_a_non_gateway_surface(platform, monkeypatch, clock):
+    import sys
+    import types
+    from heartbeat2.policy import gateway_platform
+    registry = types.SimpleNamespace(is_registered=lambda name: True)
+    monkeypatch.setitem(sys.modules, "gateway", types.ModuleType("gateway"))
+    monkeypatch.setitem(sys.modules, "gateway.platform_registry",
+                        types.SimpleNamespace(platform_registry=registry))
+    assert not gateway_platform(platform)
+    result = Policy.from_settings({}, clock=clock).creation_gate(
+        session_key="s", platform=platform, chat_type="dm", allow_gateway_injection=True)
+    assert result.reason == "non_gateway"
+
+
+def test_gateway_that_cannot_answer_admits_only_built_in_platforms(monkeypatch):
+    import sys
+    import types
+    from heartbeat2.policy import gateway_platform
+
+    def broken(name):
+        raise RuntimeError("registry unavailable")
+    monkeypatch.setitem(sys.modules, "gateway", types.ModuleType("gateway"))
+    monkeypatch.setitem(sys.modules, "gateway.platform_registry",
+                        types.SimpleNamespace(platform_registry=types.SimpleNamespace(is_registered=broken)))
+    assert gateway_platform("telegram") and not gateway_platform("converse")
+
+
 @pytest.mark.parametrize("changes,reason", [
     ({"session_key": "default"}, "missing_session"),
     ({"session_key": ""}, "missing_session"),

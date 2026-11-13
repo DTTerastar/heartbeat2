@@ -15,7 +15,7 @@ import random
 import uuid
 
 from .model import Wake, RECURRING_KINDS, TIME_KINDS, PROBE_KINDS, EVENT_KINDS, agent_authored
-from .policy import MESSAGING_PLATFORMS, owner_class, is_owner, is_watcher, one_shot, holds_messages
+from .policy import gateway_platform, owner_class, is_owner, is_watcher, one_shot, holds_messages
 from .schedule import time_due, local_day, parse_duration, next_every
 from . import governor
 
@@ -544,7 +544,7 @@ class Poller:
         if not s.enabled: return 'session_off',False,None
         if s.paused_until is not None and s.paused_until>now: return 'session_paused',True,None
         if self.policy.dm_only and (s.chat_type!='dm' or w.chat_type!='dm'): return 'dm_only',False,None
-        if s.platform not in MESSAGING_PLATFORMS: return 'non_gateway',False,None
+        if not gateway_platform(s.platform): return 'non_gateway',False,None
         health=json.loads(self.store.get_meta('provider_health') or '{}')
         if health.get('trial'):
             wid,key=health['trial'].split('/',1)

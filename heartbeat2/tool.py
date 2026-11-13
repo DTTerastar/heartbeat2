@@ -6,7 +6,7 @@ import json
 import re
 
 from .model import Wake, Session, TIME_KINDS, RECURRING_KINDS, PROBE_KINDS, EVENT_KINDS, FINISHED_WAKE_STATUSES
-from .policy import NON_GATEWAY_PLATFORMS, MESSAGING_PLATFORMS, owner_class, holds_messages
+from .policy import gateway_platform, owner_class, holds_messages
 from .schedule import parse_at, parse_duration, next_every, next_cron
 
 
@@ -203,7 +203,7 @@ class Tool:
                     if action in {'resume','update'}:
                         if not s.enabled:
                             return {'error':'session_off'}
-                        if s.platform in NON_GATEWAY_PLATFORMS or s.platform not in MESSAGING_PLATFORMS:
+                        if not gateway_platform(s.platform):
                             return {'error':'non_gateway'}
                         if e.policy.dm_only and s.chat_type != 'dm':
                             return {'error':'dm_only'}

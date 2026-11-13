@@ -321,6 +321,21 @@ def test_I13_structured_silence_and_bare_unreported(engine):
     assert e.intake.transform_llm_output(response_text='hello', session_id='sid') is None
 
 
+def test_plugin_gateway_platform_arms_only_while_registered(engine, monkeypatch):
+    import sys
+    import types
+    e = engine
+    session(e, platform='converse')
+    create = dict(action='create', note='n', trigger={'kind': 'at', 'at': '+1h'})
+    assert e.tool.handle(create)['error'] == 'non_gateway'
+    registry = types.SimpleNamespace(is_registered=lambda name: name == 'converse')
+    monkeypatch.setitem(sys.modules, 'gateway', types.ModuleType('gateway'))
+    monkeypatch.setitem(sys.modules, 'gateway.platform_registry',
+                        types.SimpleNamespace(platform_registry=registry))
+    assert 'error' not in e.tool.handle(create)
+    assert len(e.store.list_wakes()) == 1
+
+
 def test_I14_non_gateway_arming_refused(engine):
     e = engine
     for platform in ('cli', 'tui', 'desktop', 'api_server'):

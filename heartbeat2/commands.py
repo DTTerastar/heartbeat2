@@ -6,7 +6,7 @@ import re
 from .model import Wake, Session, FINISHED_WAKE_STATUSES
 from . import governor
 from . import cache
-from .policy import INJECTION_CONFIG, MESSAGING_PLATFORMS, owner_requested
+from .policy import INJECTION_CONFIG, gateway_platform, owner_requested
 from .schedule import parse_duration, quiet_end, local_day, _DURATION
 from .tool import session_env, Infeasible
 
@@ -213,12 +213,12 @@ def handle(raw_args, runtime):
         with engine.store.atomic():
             session = engine.store.get_session(key)
             bound={name:session_env('HERMES_SESSION_'+name.upper()) for name in ('platform','chat_type','chat_id')}
-            if bound['platform'] in MESSAGING_PLATFORMS:
+            if gateway_platform(bound['platform']):
                 engine.store.upsert_session(Session(key,**bound,current_session_id=session_env('HERMES_SESSION_ID')))
                 session=engine.store.get_session(key)
                 engine.store.cas_session(key,{'platform':session.platform,'chat_type':session.chat_type,'chat_id':session.chat_id},**bound)
                 session=engine.store.get_session(key)
-            if session is None or session.platform not in MESSAGING_PLATFORMS:
+            if session is None or not gateway_platform(session.platform):
                 return 'Error: /pulse needs a known messaging-gateway session.'
             if engine.policy.dm_only and session.chat_type != 'dm': return 'Error: /pulse requires a DM.'
             if action == 'desk' and not rest:
