@@ -145,11 +145,11 @@ pulse tool results name the ignored setting.
 | `/pulse quiet 22:00-07:30` · `quiet for 3h` · `quiet off` · `quiet default` | Quiet hours for this chat; `default` goes back to your settings |
 | `/pulse ok <id>` | Approve a wake the agent proposed (when *Agent can arm wakes* is `ask_first`) |
 | `/pulse keep\|slow\|stop\|watch <id>` | Answer the governor's card for a paused wake (`watch` pauses it and asks your agent to turn it into a watcher; the next watcher-only trigger or schedule conversion keeps it yours). Any other agent edit of the trigger, timing or note makes it the agent's: it gets the agent's interval floor and cache snap, and the unanswered mute applies. |
-| `/pulse off` · `/pulse on` | Turn wakes off or back on for this chat. Only you can turn them back on. |
+| `/pulse off` · `/pulse on` | Turn wakes off or back on for this chat. Only you can do either; the agent can pause or cancel its own wakes but cannot turn a chat off. |
 
 `/pulse` is a control panel, not conversation. Using it never counts as replying to the agent. Anything else you send counts as a reply, including a reaction or an edit on platforms that report them: it resets the unanswered mute and cancels wakes armed to stop when you reply. A reaction or edit counts only when its chat maps to one HeartBeat session; in a chat shared by several sessions (for example DM threads or topics) it is ignored. The other exceptions are listed under known issues: a message queued while the agent is busy on Signal or SimpleX, and a Codex app-server steer.
 
-**Your agent** gets one tool, `pulse` (`create · list · update · pause · resume · cancel · respond · off`), and the bundled `heartbeat2-usage` skill. The skill teaches it to:
+**Your agent** gets one tool, `pulse` (`create · list · update · pause · resume · cancel · respond`), and the bundled `heartbeat2-usage` skill. The skill teaches it to:
 - take on roles and keep working on them, follow up on what it started, and use its own time well;
 - treat your budgets as the rules it works inside, and message you only when it's worth your attention;
 - prefer a watcher to a timer whenever a deterministic check can tell "changed";
@@ -189,7 +189,7 @@ These live under `plugins.entries.heartbeat2.settings` and appear in **Settings 
 | Unanswered messages before mute | `max_unanswered` | 2 | Wakes you armed, and one-time reminders you ask for in chat, always fire; agent watchers wait for your reply; other one-time agent reminders are dropped. The agent's recurring work and roles keep running silently, with their messages held until you reply. An agent edit revokes the exemption (for a chat reminder, so does an agent resume), except a watcher-only conversion you requested with `/pulse watch`. |
 | Shortest repeat (minutes) | `min_interval_minutes` | 15 | Floor for every recurring time wake. |
 | Shortest agent timer without a watcher (minutes) | `agent_ungated_floor_minutes` | 55 | Floor for recurring timers the agent arms without a watcher. |
-| Minutes between wake turns | `wake_spacing_minutes` | 10 | Per chat. |
+| Minutes between wake turns | `wake_spacing_minutes` | 10 | Per chat. A one-time reminder you asked for is not held by it. |
 | Fastest watcher check (seconds) | `probe_floor_seconds` | 60 | Watchers never check more often than this. |
 | Active wakes per chat | `max_active` | 10 | Also capped at 50 across the profile. |
 | Longest lifetime (days) | `max_lifetime_days` | 14 | Recurring wakes, watchers and agent follow-ups expire by then; agent recurring wakes default to 7 days. Roles and own time have no lifetime limit. |

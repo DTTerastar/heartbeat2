@@ -274,3 +274,17 @@ def test_owner_evidence_follows_mid_turn_compression(engine):
                            'owner_asked':True}, sid='compressed')
     assert result['wake']['owner_requested'] is True, result
     assert 'owner_asked_ignored' not in result
+
+
+def test_owner_asked_reminder_fires_when_due_despite_wake_spacing(engine):
+    """Spacing keeps the agent's own wakes apart. A timer the owner asked for is not held by it."""
+    e = engine
+    owner_turn(e)
+    asked, _ = create(e)
+    own, _ = create(e, requested=False)
+    assert asked.owner_requested and not own.owner_requested
+    finish(e)
+    session(e, last_wake_turn_at=e.clock.now())  # a wake turn just ran
+    e.clock.advance(65); e.tick()
+    injected = ' '.join(call[0] for call in e.ctx.calls)
+    assert asked.id in injected and own.id not in injected

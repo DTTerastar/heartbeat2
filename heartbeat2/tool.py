@@ -17,7 +17,7 @@ def obj(properties):
 STR = {'type': 'string'}
 BOOL = {'type': 'boolean'}
 PARAMETERS = obj({
-    'action': {'type': 'string', 'enum': ['create', 'list', 'update', 'pause', 'resume', 'cancel', 'respond', 'off']},
+    'action': {'type': 'string', 'enum': ['create', 'list', 'update', 'pause', 'resume', 'cancel', 'respond']},
     'id': STR, 'title': STR, 'note': STR, 'reason': STR,
     'trigger': obj({**{k: STR for k in ('kind','at','every','cron','after','path','pattern','url','check_every','deadline','cwd')},
                     'fire_on': {'type':'string','enum':['change','success','failure','json']},
@@ -34,7 +34,7 @@ PARAMETERS['required'] = ['action']
 DESCRIPTION = ('Your own time in this chat. Use create to arm a wake/watcher (note and trigger.kind required), or a role '
                '(role=true on every/cron/self) for a standing responsibility you own: no expiry, a turns-per-day budget, a desk view; list to inspect; '
                'update to change instructions or trigger; pause to suspend; resume to restart a paused wake; '
-               'cancel to end it; off to stop checks for this chat. During a wake turn, use respond to set '
+               'cancel to end it. During a wake turn, use respond to set '
                'outcome and notify, optionally scratch/next_check; outcome=progress with notify=false and a summary is real work, never counted as idle. Bounds and clamps are reported. Never type silence markers. '
                'Results include a `cache` line; pick intervals the line marks warm. '
                'Results include a receipt line; tell the owner what it says, not a promise of your own. '
@@ -61,6 +61,11 @@ def session_env(name):
         return get_session_env(name, '')
     except Exception:
         return ''
+
+
+# A one-time wake may be armed this far in the past (clock skew, a slow turn); beyond it the
+# time was wrong and the wake is refused rather than fired at once.
+PAST_TOLERANCE_S = 60
 
 
 class Infeasible(ValueError):
@@ -127,9 +132,6 @@ class Tool:
                     return self.respond(args, flight)
                 if action == 'list':
                     return {'ok':True,'wakes':[{**asdict(w),'cache':self.cache_result(w)} for w in e.store.list_wakes(s.session_key)]}
-                if action == 'off':
-                    e.store.cas_session(s.session_key, {'enabled':s.enabled}, enabled=False)
-                    return {'ok':True,'enabled':False}
                 if action == 'create':
                     if not s.enabled:
                         return {'error':'session_off'}
@@ -306,8 +308,11 @@ class Tool:
         """Check the final due/deadline against the bounded lifetime before storing."""
         e,p=self.engine,self.engine.policy
         point,label=w.next_due_at,'due'
-        if w.kind=='at' and point is not None and point<e.clock.now()-p.catch_up_hours*3600:
-            raise Infeasible('that time has already passed')
+        # Catch-up is for wakes missed while the gateway was down, not for arming one in the past:
+        # that fires at once, which is never what "remind me at T" meant.
+        if w.kind=='at' and point is not None and point<e.clock.now()-PAST_TOLERANCE_S:
+            now_local=datetime.fromtimestamp(e.clock.now(),p.resolved_timezone()).strftime('%a %d %b %H:%M')
+            raise Infeasible(f'that time has already passed (it is now {now_local}); for a delay use a relative time such as "in 10m"')
         watcher=w.kind in PROBE_KINDS | EVENT_KINDS
         if watcher:
             point,label=(w.deadline_at,'deadline') if w.deadline_at is not None else (w.next_due_at if w.kind in PROBE_KINDS else e.clock.now(),'due')

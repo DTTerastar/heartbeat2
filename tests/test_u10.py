@@ -289,7 +289,7 @@ def test_R10_A5_builtin_resume_keeps_system_trigger(runtime, route):
     assert bad.get('error') == 'builtin_settings_owned' and 'Settings' in bad['detail']
 
 
-@pytest.mark.parametrize('route', ['command', 'tool', 'session_pause', 'missing_session'])
+@pytest.mark.parametrize('route', ['command', 'session_pause', 'missing_session'])
 def test_R10_A6_off_stops_probes_and_preserves_due(runtime, route):
     e = runtime.get_engine(); calls = []
     def probe(w):
@@ -300,7 +300,6 @@ def test_R10_A6_off_stops_probes_and_preserves_due(runtime, route):
     w = arm(e, 'file', trigger_json={'path':'fake'})
     e.tick(); due = e.store.get_wake(w.id).next_due_at; calls.clear()
     if route=='command': commands.handle('off',runtime)
-    elif route=='tool': assert e.tool.handle({'action':'off'})['ok']
     elif route=='session_pause': session(e,paused_until=e.clock.now()+1000)
     else: e.store.connection.execute('DELETE FROM sessions WHERE session_key=?',(KEY,))
     for _ in range(5): e.clock.advance(61); e.tick()
@@ -310,6 +309,14 @@ def test_R10_A6_off_stops_probes_and_preserves_due(runtime, route):
     else: commands.handle('on',runtime)
     e.tick(); assert len(calls) == 1 and len(e.ctx.calls) == 1
     e.tick(); assert len(calls) == 1 and len(e.ctx.calls) == 1
+
+
+def test_agent_cannot_turn_a_chat_off(engine):
+    """Turning a chat off is the owner's command. The agent pauses or cancels specific wakes."""
+    from heartbeat2.tool import PARAMETERS
+    assert 'off' not in PARAMETERS['properties']['action']['enum']
+    assert engine.tool.handle({'action':'off'}).get('error')
+    assert engine.store.get_session(KEY).enabled
 
 
 def test_R10_A7_command_change_silent_baseline_then_change(engine, monkeypatch):

@@ -95,7 +95,8 @@ def render_wake(wake: Wake, occurrence: Occurrence, session: Session, *, clock: 
     if message_held in message_labels:
         lines.append(f'Messages are held right now ({message_labels[message_held]}). Your work still counts; '
                      "keep anything the owner should hear in your notes and tell them when they're back.")
-    if not session.first_notice_sent or wake.trigger_json.get('builtin'):
+    # Only the built-in check-in contacts the owner unasked, so only it says how to stop.
+    if wake.trigger_json.get('builtin'):
         lines.append('If you notify, end with one line saying they can say "stop checking in" or use /pulse off.')
     if cache_line: lines.append(escape_text(cache_line))
     return "\n".join(lines)

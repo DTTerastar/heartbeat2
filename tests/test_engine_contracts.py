@@ -25,7 +25,8 @@ def test_permission_matrix_and_proposals(engine):
     e.policy = replace(e.policy,agent_can_create='no',enabled=False)
     assert e.tool.handle(dict(action='pause',id=wid))['error']=='not_pausable'
     assert e.tool.handle(dict(action='cancel',id=wid))['ok']
-    assert e.tool.handle(dict(action='off'))['ok']
+    assert e.tool.handle(dict(action='off')).get('error')  # turning a chat off is the owner's command
+    session(e, enabled=False)
     e.policy = replace(e.policy,enabled=True,agent_can_create='yes')
     assert e.tool.handle(args)['error']=='session_off'
 

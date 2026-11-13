@@ -460,13 +460,16 @@ def test_off_chat_timed_resume_stays_paused_and_retries(engine):
     assert not engine.store.get_meta('resume_after:'+w.id)
 
 
-@pytest.mark.parametrize('age', [2*DAY, 300])
+@pytest.mark.parametrize('age', [2*DAY, 2*3600, 300, 30])
 def test_past_one_shot_refused_or_due_now(engine, age):
+    """A wake armed in the past is a wrong time, not a reminder to fire at once; only clock
+    skew of under a minute is let through."""
     when = datetime.fromtimestamp(engine.clock.now()-age,engine.policy.resolved_timezone()).isoformat()
     result = create(engine, {'kind':'at','at':when})
-    if age == 2*DAY:
+    if age > 60:
         assert result.get('error') == 'invalid_request', result
-        assert result['detail'] == 'that time has already passed'
+        assert result['detail'].startswith('that time has already passed (it is now ')
+        assert 'in 10m' in result['detail']
         assert not engine.store.list_wakes(KEY)
     else:
         assert result.get('ok'), result
@@ -623,7 +626,7 @@ def test_existing_and_babysit_hard_end_precede_expiry_hint(engine):
 @pytest.mark.parametrize('kind', ['at','command'])
 def test_overdue_dispatch_uses_current_quiet_hours(engine, kind):
     now = night(engine,22,2)
-    when = '2026-10-14T21:59:00+00:00'
+    when = '2026-10-14T22:01:30+00:00' if kind=='at' else '2026-10-14T21:59:00+00:00'
     trigger = {'kind':kind, 'at':when} if kind=='at' else {
         'kind':'command','command':['git','status'],'deadline':when}
     rejected = create(engine, trigger, until={'expires':'2026-10-14T23:00:00+00:00'})

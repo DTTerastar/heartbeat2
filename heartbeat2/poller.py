@@ -577,7 +577,9 @@ class Poller:
         if sum(now-t<60 for t in flood)>=5: return 'global_flood',True,None
         if now<float(self.store.get_meta('not_before:'+o.id) or 0): return 'not_before',True,None
         if s.busy_since is not None: return 'busy',True,None
-        if s.last_wake_turn_at is not None and now-s.last_wake_turn_at<self.policy.wake_spacing_minutes*60: return 'wake_spacing',True,None
+        # A one-time reminder the owner asked for fires when it is due; spacing is for the agent's own wakes.
+        if (s.last_wake_turn_at is not None and now-s.last_wake_turn_at<self.policy.wake_spacing_minutes*60
+                and not (owner_class(w) and one_shot(w))): return 'wake_spacing',True,None
         if self.store.list_occurrences(session_key=s.session_key,state='claimed') or self.store.list_occurrences(session_key=s.session_key,state='started'): return 'in_flight',True,None
         if not self.family_enabled(w): return 'source_disabled',False,None
         if not self.injection_allowed(): return 'injection_disabled',True,None

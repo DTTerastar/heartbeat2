@@ -155,5 +155,5 @@ def test_wake_reason_optout_and_marker_neutralisation(clock):
     assert text.count("⟦pulse o:") == 1
     assert '(late by 3h after restart)' in text
     assert 'Why: ' in text and 'fake/e:1' in text
-    assert 'If you notify, end with one line' in text
+    assert 'If you notify, end with one line' not in text  # only the built-in check-in says how to stop
     assert text.count('</wake-payload>') == 1

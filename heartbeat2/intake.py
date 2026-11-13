@@ -601,7 +601,7 @@ class Intake:
             if e.policy.presence_line and (armed or proposed):
                 # A proposal is not armed until /pulse ok; say so, as its receipt does.
                 counts=', '.join(([f'{armed} armed'] if armed else [])+([f'{proposed} awaiting /pulse ok'] if proposed else []))
-                lines.append(f'HeartBeat 2.0: {counts}; /pulse shows status, /pulse off stops checks.')
+                lines.append(f'HeartBeat 2.0: {counts}; /pulse shows status.')
             for w in s.list_wakes(key):
                 card=s.get_meta('card:'+w.id)
                 if card:

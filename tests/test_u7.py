@@ -58,7 +58,7 @@ def test_R7_L5_builtin_checkin_stays_muted(engine):
 
 
 @pytest.mark.parametrize('gate', ['quiet_hours', 'daily_model_cap', 'daily_message_cap',
-                                   'busy', 'wake_spacing', 'provider_unavailable'])
+                                   'busy', 'provider_unavailable'])
 def test_R7_L5_owner_obeys_other_gates(engine, gate):
     e = engine
     e.acquire()  # Startup reconciliation clears stale busy flags first.
@@ -70,8 +70,6 @@ def test_R7_L5_owner_obeys_other_gates(engine, gate):
         e.policy = replace(e.policy, **{name: 0})
     elif gate == 'busy':
         session(e, busy_since=e.clock.now())
-    elif gate == 'wake_spacing':
-        session(e, last_wake_turn_at=e.clock.now())
     else:
         e.provider_failure('rate_limit')
     w = arm(e, 'every' if gate.startswith('daily_') else 'at', creator='user')
